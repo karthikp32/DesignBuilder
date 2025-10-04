@@ -32,6 +32,7 @@ class Orchestrator:
             self.agents.append(agent)
             tasks.append(agent.run())
 
+        # TODO: Use multiprocessing instead of asyncio.gather for true parallelism.
         # Run all agents in parallel
         await asyncio.gather(*tasks)
 
