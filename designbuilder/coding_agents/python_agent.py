@@ -6,7 +6,7 @@ writing, testing, and debugging Python code.
 """
 import asyncio
 from .base import CodingAgent
-from designbuilder.backends.gemini import GeminiBackend
+from designbuilder.llm_clis.gemini_cli import GeminiCliBackend
 
 class PythonAgent(CodingAgent):
     """

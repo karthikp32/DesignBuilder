@@ -6,7 +6,7 @@ parallel coding agents to build, test, and debug them.
 """
 import asyncio
 from . import parser
-from designbuilder.agents.python_agent import PythonAgent
+from designbuilder.coding_agents.python_agent import PythonAgent
 
 class Orchestrator:
     """
