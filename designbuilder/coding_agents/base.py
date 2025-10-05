@@ -12,8 +12,11 @@ class CodingAgent(ABC):
     """
     An abstract base class for an agent that can write, test, and debug code.
     """
+    MAX_DEBUG_ATTEMPTS = 10
+
     def __init__(self, component: dict):
         self.component = component
+        self.debug_attempts = 0
         
         # Sanitize component name for filename
         sanitized_name = "".join(c for c in self.component['name'] if c.isalnum() or c in (' ', '_')).rstrip()
@@ -56,5 +59,12 @@ class CodingAgent(ABC):
         await self.plan()
         await self.implement()
         
-        if not await self.test():
+        while not await self.test():
+            if self.debug_attempts >= self.MAX_DEBUG_ATTEMPTS:
+                self._log(f"Max debug attempts ({self.MAX_DEBUG_ATTEMPTS}) reached for {self.component['name']}. Manual intervention required.")
+                print(f"[ATTENTION] Max debug attempts reached for {self.component['name']}. Please review logs and code for manual debugging.")
+                break
+            
+            self.debug_attempts += 1
+            self._log(f"Debug attempt {self.debug_attempts}/{self.MAX_DEBUG_ATTEMPTS} for {self.component['name']}.")
             await self.debug()

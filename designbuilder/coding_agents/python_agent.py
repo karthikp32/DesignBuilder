@@ -1,10 +1,11 @@
-"""
+
 Python Coding Agent
 
 A concrete implementation of a CodingAgent that specializes in
 writing, testing, and debugging Python code.
 """
 import asyncio
+import os
 from .base import CodingAgent
 from designbuilder.llm_clis.gemini_cli import GeminiCliBackend
 
@@ -15,6 +16,8 @@ class PythonAgent(CodingAgent):
     def __init__(self, component: dict):
         super().__init__(component)
         self.llm_backend = GeminiCliBackend()
+        self.output_dir = "/home/karthik/repos/DesignBuilder/designbuilder/output"
+        os.makedirs(self.output_dir, exist_ok=True)
 
     async def plan(self):
         self._log("Planning Python component...")
@@ -27,6 +30,15 @@ class PythonAgent(CodingAgent):
         prompt = f"Implement the following component in Python: {self.component['description']}"
         self.implementation = await self.llm_backend.generate_code(prompt)
         self._log(f"Implementation complete:{self.implementation}")
+
+        # Sanitize component name for filename
+        sanitized_name = "".join(c for c in self.component['name'] if c.isalnum() or c in (' ', '_')).rstrip()
+        sanitized_name = sanitized_name.replace(' ', '_').lower()
+        
+        output_file_path = os.path.join(self.output_dir, f"{sanitized_name}.py")
+        with open(output_file_path, "w") as f:
+            f.write(self.implementation)
+        self._log(f"Generated code written to {output_file_path}")
 
     async def test(self) -> bool:
         self._log("Testing Python component...")
@@ -42,8 +54,17 @@ class PythonAgent(CodingAgent):
         self._log("Debugging Python component...")
         prompt = f"The tests failed for the following code:\n\n{self.implementation}\n\nPlease fix it."
         self.implementation = await self.llm_backend.fix_code(self.implementation, "Tests failed")
+        self._log(f"Debug complete. Re-running tests. Fixed implementation:{self.implementation}")
+        
+        # Overwrite the file with the fixed implementation
+        sanitized_name = "".join(c for c in self.component['name'] if c.isalnum() or c in (' ', '_')).rstrip()
+        sanitized_name = sanitized_name.replace(' ', '_').lower()
+        output_file_path = os.path.join(self.output_dir, f"{sanitized_name}.py")
+        with open(output_file_path, "w") as f:
+            f.write(self.implementation)
+        self._log(f"Fixed code written to {output_file_path}")
+
         self.debug_run = True # Mark that a debug cycle has occurred.
-        self._log("Debug complete. Re-running tests.")
         await self.test()
 
     def _log(self, message: str):
