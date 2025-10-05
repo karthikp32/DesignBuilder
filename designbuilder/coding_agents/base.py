@@ -1,3 +1,4 @@
+
 """
 Base Coding Agent Interface
 
@@ -14,10 +15,11 @@ class CodingAgent(ABC):
     """
     MAX_DEBUG_ATTEMPTS = 10
 
-    def __init__(self, component: dict):
+    def __init__(self, component: dict, orchestrator=None):
         self.component = component
+        self.orchestrator = orchestrator # New: Reference to orchestrator
         self.debug_attempts = 0
-        self.status = "initialized" # New: Agent status
+        self._status = "initialized" # New: Agent status (private backing variable)
         self.changes_summary = [] # New: To store summaries of changes
         
         # Sanitize component name for filename
@@ -33,6 +35,17 @@ class CodingAgent(ABC):
 
         # Create log directory if it doesn't exist
         os.makedirs(log_dir, exist_ok=True)
+
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
+    def status(self, value):
+        if self._status != value:
+            self._status = value
+            if self.orchestrator:
+                self.orchestrator._save_state() # Save state when status changes
 
     @abstractmethod
     async def plan(self):

@@ -1,3 +1,4 @@
+
 """
 DesignBuilder CLI
 
@@ -9,9 +10,10 @@ import asyncio
 import typer
 import os
 import glob
+import json
 from typing import List, Optional
 from pathlib import Path
-from designbuilder.core.orchestrator import Orchestrator
+from designbuilder.core.orchestrator import Orchestrator, STATE_FILE_PATH
 from rich.console import Console
 from rich.table import Table
 
@@ -39,18 +41,26 @@ def agents_status():
     """
     View the progress and test results of all running agents.
     """
-    global orchestrator_instance
-    if orchestrator_instance is None:
-        typer.echo("No build process is currently running. Please run 'designbuilder build' first.", err=True)
-        raise typer.Exit(1)
-
     console = Console()
     table = Table(title="Agent Status")
     table.add_column("NAME", style="cyan", no_wrap=True)
     table.add_column("STATUS", style="magenta")
 
-    for agent_name, agent in orchestrator_instance.agent_map.items():
-        table.add_row(agent_name, agent.status)
+    if not os.path.exists(STATE_FILE_PATH):
+        typer.echo("No build process has been started or no state is saved yet.", err=True)
+        raise typer.Exit(1)
+
+    try:
+        with open(STATE_FILE_PATH, 'r') as f:
+            state_data = json.load(f)
+            for agent_name, agent_state in state_data.items():
+                table.add_row(agent_name, agent_state.get("status", "unknown"))
+    except json.JSONDecodeError:
+        typer.echo(f"Error: Could not decode state file {STATE_FILE_PATH}.", err=True)
+        raise typer.Exit(1)
+    except Exception as e:
+        typer.echo(f"An unexpected error occurred: {e}", err=True)
+        raise typer.Exit(1)
     
     console.print(table)
 
