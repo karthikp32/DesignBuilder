@@ -12,31 +12,50 @@ import glob
 from typing import List, Optional
 from pathlib import Path
 from designbuilder.core.orchestrator import Orchestrator
+from rich.console import Console
+from rich.table import Table
 
 app = typer.Typer()
+
+# Global orchestrator instance (not ideal, but simplifies CLI access for now)
+orchestrator_instance: Optional[Orchestrator] = None
+
+async def _run_build(design_docs: List[str]):
+    global orchestrator_instance
+    print(f"Building from design documents: {design_docs}")
+    orchestrator_instance = Orchestrator(design_docs)
+    await orchestrator_instance.run()
+    print("Build process completed.")
 
 @app.command()
 def build(design_docs: List[str]):
     """
     Parse design documents, spawn coding agents, and build components.
     """
-    print(f"Building from design documents: {design_docs}")
-    orchestrator = Orchestrator(design_docs)
-    asyncio.run(orchestrator.run())
-    print("Build process completed.")
+    asyncio.run(_run_build(design_docs))
 
 @app.command()
-def status():
+def agents_status():
     """
     View the progress and test results of all running agents.
     """
-    print("Fetching agent statuses...")
-    # Placeholder for status logic
-    # In a real implementation, this would read from /state/status.json
-    # or an in-memory state managed by the orchestrator.
+    global orchestrator_instance
+    if orchestrator_instance is None:
+        typer.echo("No build process is currently running. Please run 'designbuilder build' first.", err=True)
+        raise typer.Exit(1)
+
+    console = Console()
+    table = Table(title="Agent Status")
+    table.add_column("NAME", style="cyan", no_wrap=True)
+    table.add_column("STATUS", style="magenta")
+
+    for agent_name, agent in orchestrator_instance.agent_map.items():
+        table.add_row(agent_name, agent.status)
+    
+    console.print(table)
 
 @app.command()
-def logs(agent_name: str, tail: Optional[int] = typer.Option(None, "--tail", "-t", help="Show last N lines")):
+def agent_logs(agent_name: str, tail: Optional[int] = typer.Option(None, "--tail", "-t", help="Show last N lines")):
     """
     View the logs for a specific agent.
     
@@ -153,14 +172,62 @@ def _list_available_agents():
     else:
         typer.echo("No agents found.", err=True)
 
+async def _run_debug(agent_name: str):
+    global orchestrator_instance
+    if orchestrator_instance is None:
+        typer.echo("Error: No build process is currently running. Please run 'designbuilder build' first.", err=True)
+        raise typer.Exit(1)
+
+    agent = orchestrator_instance.get_agent_by_name(agent_name)
+    if agent is None:
+        typer.echo(f"Error: Agent '{agent_name}' not found.", err=True)
+        typer.echo("Available agents:", err=True)
+        for name in orchestrator_instance.get_agent_names():
+            typer.echo(f"  - {name}", err=True)
+        raise typer.Exit(1)
+
+    # Main interactive debug loop
+    while True:
+        if agent.status == "completed":
+            typer.echo(f"Agent '{agent_name}' has completed its task.")
+            break
+        elif agent.status != "paused_for_guidance":
+            typer.echo(f"Agent '{agent_name}' is not in a paused state for guidance (current status: {agent.status}).")
+            typer.echo("You can only interact with agents that are paused for guidance.")
+            break
+
+        typer.echo(f"\n--- Interactive Debug Session for Agent: {agent_name} ---")
+        typer.echo("Agent is paused and requires your guidance.")
+        typer.echo("Summary of changes:")
+        typer.echo(agent.get_changes_summary())
+        typer.echo("Type your guidance below. Type 'exit' or 'quit' to end the session.")
+        typer.echo("------------------------------------------------------")
+
+        try:
+            guidance = typer.prompt("Your guidance")
+            if guidance.lower() in ['exit', 'quit']:
+                typer.echo("Exiting interactive debug session.")
+                break
+            
+            typer.echo(f"Sending guidance to agent '{agent_name}'...")
+            await agent.guide(guidance)
+            typer.echo(f"Guidance processed. Resuming agent '{agent_name}'...")
+            # After guidance, re-run the agent to let it continue its work
+            await agent.run()
+            typer.echo(f"Agent '{agent_name}' resumed. Current status: {agent.status}")
+
+        except EOFError:
+            typer.echo("Exiting interactive debug session (EOF).", err=True)
+            break
+        except Exception as e:
+            typer.echo(f"An error occurred: {e}", err=True)
+
 @app.command()
-def debug(agent_name: str):
+def guide(agent_name: str):
     """
-    Interactively debug a failing agent.
+    Interactively debug and guide a failing agent.
     """
-    print(f"Starting debug session for agent: {agent_name}")
-    # Placeholder for interactive debugging logic
-    # This could attach to a running agent or provide a REPL.
+    asyncio.run(_run_debug(agent_name))
 
 if __name__ == "__main__":
     app()

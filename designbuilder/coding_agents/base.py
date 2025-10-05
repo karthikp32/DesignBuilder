@@ -17,6 +17,8 @@ class CodingAgent(ABC):
     def __init__(self, component: dict):
         self.component = component
         self.debug_attempts = 0
+        self.status = "initialized" # New: Agent status
+        self.changes_summary = [] # New: To store summaries of changes
         
         # Sanitize component name for filename
         sanitized_name = "".join(c for c in self.component['name'] if c.isalnum() or c in (' ', '_')).rstrip()
@@ -52,19 +54,48 @@ class CodingAgent(ABC):
         """Debug the implementation if tests fail."""
         pass
 
+    @abstractmethod
+    async def guide(self, guidance: str):
+        """Guide the agent with user input."""
+        pass
+
     async def run(self):
         """
         Execute the full implement -> test -> debug loop.
         """
+        self.status = "planning"
         await self.plan()
+        
+        self.status = "implementing"
         await self.implement()
         
+        self.status = "testing"
         while not await self.test():
             if self.debug_attempts >= self.MAX_DEBUG_ATTEMPTS:
                 self._log(f"Max debug attempts ({self.MAX_DEBUG_ATTEMPTS}) reached for {self.component['name']}. Manual intervention required.")
                 print(f"[ATTENTION] Max debug attempts reached for {self.component['name']}. Please review logs and code for manual debugging.")
+                self.status = "paused_for_guidance" # New: Set status to paused
                 break
             
             self.debug_attempts += 1
             self._log(f"Debug attempt {self.debug_attempts}/{self.MAX_DEBUG_ATTEMPTS} for {self.component['name']}.")
+            self.status = "debugging"
             await self.debug()
+            self.status = "testing" # After debug, re-test
+        
+        if self.status != "paused_for_guidance":
+            self.status = "completed" # New: Set status to completed if not paused
+
+    def _log(self, message: str):
+        """Log a message to the agent's log file."""
+        # In a real implementation, this would be a more robust logger.
+        with open(self.log_file, "a") as f:
+            f.write(f"{message}\n")
+        print(f"[{self.component['name']}] {message}")
+
+    def get_changes_summary(self) -> str:
+        """
+        Returns a summary of changes made during debugging.
+        This should be implemented by concrete agents.
+        """
+        return "No specific changes summary available from base agent."

@@ -1,4 +1,5 @@
 
+"""
 Python Coding Agent
 
 A concrete implementation of a CodingAgent that specializes in
@@ -18,6 +19,7 @@ class PythonAgent(CodingAgent):
         self.llm_backend = GeminiCliBackend()
         self.output_dir = "/home/karthik/repos/DesignBuilder/designbuilder/output"
         os.makedirs(self.output_dir, exist_ok=True)
+        self.implementation = "" # Initialize implementation
 
     async def plan(self):
         self._log("Planning Python component...")
@@ -66,6 +68,19 @@ class PythonAgent(CodingAgent):
 
         self.debug_run = True # Mark that a debug cycle has occurred.
         await self.test()
+
+    async def guide(self, guidance: str):
+        self._log(f"User guidance received: {guidance}")
+        prompt = f"The user has provided the following guidance:\n\n{guidance}\n\nThe current code is:\n\n{self.implementation}\n\nThe tests are failing. Please incorporate this guidance to fix the code."
+        self.implementation = await self.llm_backend.fix_code(self.implementation, guidance) # Use guidance as error for fix_code
+        self._log(f"Code updated based on guidance: {self.implementation}")
+        self.debug_attempts = 0 # Reset debug attempts after guidance
+        self.status = "testing" # Set status to testing to resume loop
+
+    def get_changes_summary(self) -> str:
+        summary = f"Current Implementation (after {self.debug_attempts} debug attempts):\n"\
+                  f"```python\n{self.implementation}\n```\n"
+        return summary
 
     def _log(self, message: str):
         """Log a message to the agent's log file."""

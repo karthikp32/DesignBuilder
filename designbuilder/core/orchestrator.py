@@ -16,6 +16,7 @@ class Orchestrator:
         self.design_docs = design_docs
         self.components = []
         self.agents = []
+        self.agent_map = {}
 
     async def run(self):
         """
@@ -30,6 +31,7 @@ class Orchestrator:
             # Agent selection logic can be expanded here
             agent = PythonAgent(component)
             self.agents.append(agent)
+            self.agent_map[agent.component['name']] = agent
             tasks.append(agent.run())
 
         # TODO: Use multiprocessing instead of asyncio.gather for true parallelism.
@@ -38,6 +40,18 @@ class Orchestrator:
 
         print("All agents have completed their work.")
         self._run_evals()
+
+    def get_agent_names(self) -> list[str]:
+        """
+        Returns a list of names of all agents managed by the orchestrator.
+        """
+        return list(self.agent_map.keys())
+
+    def get_agent_by_name(self, agent_name: str):
+        """
+        Returns an agent instance by its name.
+        """
+        return self.agent_map.get(agent_name)
 
     def _run_evals(self):
         """
