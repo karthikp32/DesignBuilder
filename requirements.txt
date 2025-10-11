@@ -3,3 +3,4 @@ pytest
 pypdf
 python-docx
 google-generativeai
+filelock
