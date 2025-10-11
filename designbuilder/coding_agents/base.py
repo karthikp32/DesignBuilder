@@ -1,4 +1,3 @@
-
 """
 Base Coding Agent Interface
 
@@ -17,18 +16,18 @@ class CodingAgent(ABC):
 
     def __init__(self, component: dict, orchestrator=None):
         self.component = component
-        self.orchestrator = orchestrator # New: Reference to orchestrator
+        self.orchestrator = orchestrator
         self.debug_attempts = 0
-        self._status = "initialized" # New: Agent status (private backing variable)
-        self.changes_summary = [] # New: To store summaries of changes
-        
+        self._status = "initialized"
+        self.changes_summary = []
+
         # Sanitize component name for filename
         sanitized_name = "".join(c for c in self.component['name'] if c.isalnum() or c in (' ', '_')).rstrip()
         sanitized_name = sanitized_name.replace(' ', '_')
-        
+
         # Create timestamp
         timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        
+
         # Define log directory and file
         log_dir = "/home/karthik/repos/DesignBuilder/logs"
         self.log_file = f"{log_dir}/{sanitized_name}_{timestamp}.log"
@@ -45,7 +44,7 @@ class CodingAgent(ABC):
         if self._status != value:
             self._status = value
             if self.orchestrator:
-                self.orchestrator._save_state() # Save state when status changes
+                self.orchestrator.on_agent_status_update(self)
 
     @abstractmethod
     async def plan(self):
@@ -72,32 +71,37 @@ class CodingAgent(ABC):
         """Guide the agent with user input."""
         pass
 
+    @abstractmethod
+    async def interactive_prompt(self, prompt: str) -> str:
+        """Send an interactive prompt to the agent's LLM and get a response."""
+        pass
+
     async def run(self):
         """
         Execute the full implement -> test -> debug loop.
         """
         self.status = "planning"
         await self.plan()
-        
+
         self.status = "implementing"
         await self.implement()
-        
+
         self.status = "testing"
         while not await self.test():
             if self.debug_attempts >= self.MAX_DEBUG_ATTEMPTS:
                 self._log(f"Max debug attempts ({self.MAX_DEBUG_ATTEMPTS}) reached for {self.component['name']}. Manual intervention required.")
                 print(f"[ATTENTION] Max debug attempts reached for {self.component['name']}. Please review logs and code for manual debugging.")
-                self.status = "paused_for_guidance" # New: Set status to paused
+                self.status = "paused_for_guidance"
                 break
-            
+
             self.debug_attempts += 1
             self._log(f"Debug attempt {self.debug_attempts}/{self.MAX_DEBUG_ATTEMPTS} for {self.component['name']}.")
             self.status = "debugging"
             await self.debug()
             self.status = "testing" # After debug, re-test
-        
+
         if self.status != "paused_for_guidance":
-            self.status = "completed" # New: Set status to completed if not paused
+            self.status = "completed"
 
     def _log(self, message: str):
         """Log a message to the agent's log file."""

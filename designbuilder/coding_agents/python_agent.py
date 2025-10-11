@@ -14,8 +14,8 @@ class PythonAgent(CodingAgent):
     """
     A coding agent for generating Python code.
     """
-    def __init__(self, component: dict):
-        super().__init__(component)
+    def __init__(self, component: dict, orchestrator=None):
+        super().__init__(component, orchestrator)
         self.llm_backend = GeminiCliBackend()
         self.output_dir = "/home/karthik/repos/DesignBuilder/designbuilder/output"
         os.makedirs(self.output_dir, exist_ok=True)
@@ -77,8 +77,43 @@ class PythonAgent(CodingAgent):
         self.debug_attempts = 0 # Reset debug attempts after guidance
         self.status = "testing" # Set status to testing to resume loop
 
+    async def run_test_debug_cycle(self):
+        """
+        Run the complete test-debug cycle until completion or max attempts reached.
+        """
+        self._log("Starting test-debug cycle...")
+        
+        while self.status in ["testing", "debugging"] and self.debug_attempts < 3:
+            if self.status == "testing":
+                test_passed = await self.test()
+                if test_passed:
+                    self.status = "completed"
+                    self._log("Agent completed successfully!")
+                    return True
+                else:
+                    self.status = "debugging"
+            
+            if self.status == "debugging":
+                await self.debug()
+                self.debug_attempts += 1
+                
+                if self.debug_attempts >= 3:
+                    self.status = "paused_for_guidance"
+                    self._log(f"Agent needs more guidance after {self.debug_attempts} debug attempts.")
+                    return False
+                else:
+                    self.status = "testing"
+        
+        return self.status == "completed"
+
+    async def interactive_prompt(self, prompt: str) -> str:
+        self._log(f"Interactive prompt received: {prompt}")
+        response = await self.llm_backend.send_prompt(prompt) # Only send the user's prompt
+        self._log(f"Interactive prompt response: {response}")
+        return response
+
     def get_changes_summary(self) -> str:
-        summary = f"Current Implementation (after {self.debug_attempts} debug attempts):\n"\
+        summary = f"Current Implementation (after {self.debug_attempts} debug attempts):\n" \
                   f"```python\n{self.implementation}\n```\n"
         return summary
 
