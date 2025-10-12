@@ -38,14 +38,6 @@ class GeminiCliBackend(LLMBackend):
 
         return stdout.decode()
 
-    async def generate_code(self, prompt: str) -> str:
-        print(f"Generating code with Gemini CLI (auto-selected model) for prompt: {prompt[:50]}...")
-        return await self._run_gemini_cli(prompt)
-
-    async def fix_code(self, code: str, error: str) -> str:
-        prompt = f"Fix the following code:\n\n{code}\n\nThe error was:\n{error}"
-        print(f"Fixing code with Gemini CLI (auto-selected model) for error: {error}")
-        return await self._run_gemini_cli(prompt)
 
     async def send_prompt(self, prompt: str) -> str:
         print(f"Sending prompt to Gemini CLI (auto-selected model): {prompt[:50]}...")

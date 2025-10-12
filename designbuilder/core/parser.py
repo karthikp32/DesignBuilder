@@ -5,7 +5,7 @@ Extracts software components and their requirements from
 design documents using an LLM.
 """
 import os
-import json
+import yaml
 import docx
 from pypdf import PdfReader
 from designbuilder.llm_backends.gemini import GeminiBackend
@@ -36,25 +36,25 @@ async def _read_file_content(file_path: str) -> str:
 
     return content
 
-async def parse_design_docs(design_docs: list[str]) -> list[dict]:
+async def parse_design_docs(design_docs: list[str]) -> str:
     """
     Reads design documents, uses an LLM to extract components,
-    and returns them as a list of dictionaries.
+    and returns them as a YAML formatted string.
     """
     print(f"Parsing design documents: {design_docs}")
-    
+
     full_text = ""
     for doc_path in design_docs:
         full_text += await _read_file_content(doc_path) + "\n\n"
 
     if not full_text.strip():
-        return []
+        return ""
 
     prompt = f"""Analyze the following system design document(s) and extract the architectural components.
 
 For each component, provide its name, a detailed description of its responsibilities, and the programming language or technology it uses.
 
-Please provide the output in JSON format as a list of objects, where each object has the keys "name", "description", and "language".
+Please provide the output in YAML format as a list of objects, where each object has the keys "name", "description", and "language".
 
 ---
 
@@ -62,16 +62,16 @@ Please provide the output in JSON format as a list of objects, where each object
 """
 
     llm_backend = GeminiBackend()
-    json_output = await llm_backend.generate_content(prompt)
+    yaml_output = await llm_backend.generate_content(prompt)
 
     try:
-        # The LLM might return the JSON within a code block, so we need to extract it.
-        if "```json" in json_output:
-            json_output = json_output.split("```json")[1].split("```")[0]
-        components = json.loads(json_output)
-    except (json.JSONDecodeError, IndexError) as e:
-        print(f"Error parsing JSON from LLM: {e}")
-        print(f"LLM output:\n{json_output}")
+        # The LLM might return the YAML within a code block, so we need to extract it.
+        if "```yaml" in yaml_output:
+            yaml_output = yaml_output.split("```yaml")[1].split("```")[0]
+        components = yaml.safe_load(yaml_output)
+    except (yaml.YAMLError, IndexError) as e:
+        print(f"Error parsing YAML from LLM: {e}")
+        print(f"LLM output:\n{yaml_output}")
         components = []
 
-    return components
+    return yaml.dump(components)

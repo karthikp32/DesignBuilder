@@ -43,8 +43,10 @@ def agents_status():
     """
     console = Console()
     table = Table(title="Agent Status")
-    table.add_column("NAME", style="cyan", no_wrap=True)
-    table.add_column("STATUS", style="magenta")
+    table.add_column("Agent Name", style="cyan", no_wrap=True)
+    table.add_column("Component Name", style="blue", no_wrap=True)
+    table.add_column("Status", style="magenta")
+    table.add_column("Underlying LLM", style="green")
 
     status_manager = StatusManager()
     status_data = status_manager.get_all_status()
@@ -53,8 +55,28 @@ def agents_status():
         typer.echo("No build process has been started or no state is saved yet.", err=True)
         raise typer.Exit(1)
 
+    # Try to get agent instances from orchestrator for detailed info
+    global orchestrator_instance
+    agent_instances = {}
+    if orchestrator_instance:
+        agent_instances = orchestrator_instance.agent_map
+
     for agent_name, agent_state in status_data.items():
-        table.add_row(agent_name, agent_state.get("status", "unknown"))
+        # Get component name and LLM from status data first, then from agent instance if available
+        component_name = agent_state.get("name", agent_name)
+        llm_backend = agent_state.get("llm_backend", "Unknown")
+        
+        # If agent instance is available, use it to get real-time info
+        if agent_name in agent_instances:
+            agent = agent_instances[agent_name]
+            component_name = agent.component.get('name', component_name)
+            llm_backend = agent.get_llm_backend_name()
+        
+        status = agent_state.get("status", "unknown")
+        
+        # Display the agent name (could be agent-1, agent-2, etc. or legacy component name)
+        display_agent_name = agent_name
+        table.add_row(display_agent_name, component_name, status, llm_backend)
 
     console.print(table)
 

@@ -10,11 +10,6 @@ class LLMBackend(ABC):
     Abstract interface for a large language model backend.
     """
     @abstractmethod
-    async def generate_code(self, prompt: str) -> str:
-        """Generate code from a prompt."""
-        pass
-
-    @abstractmethod
-    async def fix_code(self, code: str, error: str) -> str:
-        """Fix code based on an error message."""
+    async def send_prompt(self, prompt: str) -> str:
+        """Send a prompt to the LLM."""
         pass

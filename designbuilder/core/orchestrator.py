@@ -6,6 +6,7 @@ parallel coding agents to build, test, and debug them.
 """
 import asyncio
 import os
+import yaml
 from . import parser
 from designbuilder.coding_agents.python_agent import PythonAgent
 from designbuilder.core.status_manager import StatusManager # Import StatusManager
@@ -21,6 +22,7 @@ class Orchestrator:
         self.agent_map = {}
         self.status_manager = StatusManager() # Instantiate StatusManager
         self._loaded_agent_states = self.status_manager.get_all_status() # Use StatusManager to load state
+        self._agent_counter = 0  # Counter for generating agent names
 
     def _save_state(self):
         serializable_state = {} # This will hold the state of all agents
@@ -28,17 +30,23 @@ class Orchestrator:
             serializable_state[agent_name] = {
                 "name": agent.component['name'],
                 "status": agent.status,
-                "debug_attempts": agent.debug_attempts
+                "debug_attempts": agent.debug_attempts,
+                "llm_backend": agent.get_llm_backend_name()
             }
         self.status_manager.set_all_status(serializable_state) # Use set_all_status
 
+    def _generate_agent_name(self) -> str:
+        """Generate a unique agent name like agent-1, agent-2, etc."""
+        self._agent_counter += 1
+        return f"agent-{self._agent_counter}"
 
     async def run(self):
         """
         Main entrypoint to start the build process.
         """
         print("Orchestrator starting...")
-        self.components = await parser.parse_design_docs(self.design_docs)
+        components_yaml = await parser.parse_design_docs(self.design_docs)
+        self.components = yaml.safe_load(components_yaml) if components_yaml else []
         print(f"Found {len(self.components)} components.")
 
         tasks = []
@@ -47,15 +55,21 @@ class Orchestrator:
 
         for component in self.components:
             agent = PythonAgent(component, orchestrator=self) # Pass orchestrator to agent
+            agent_name = self._generate_agent_name()  # Generate unique agent name
 
-            # Apply loaded state if available
+            # Apply loaded state if available (try both old component name and new agent name)
+            loaded_state = None
             if component['name'] in self._loaded_agent_states:
                 loaded_state = self._loaded_agent_states[component['name']]
+            elif agent_name in self._loaded_agent_states:
+                loaded_state = self._loaded_agent_states[agent_name]
+            
+            if loaded_state:
                 agent.status = loaded_state.get("status", "initialized")
                 agent.debug_attempts = loaded_state.get("debug_attempts", 0)
 
             self.agents.append(agent)
-            self.agent_map[agent.component['name']] = agent
+            self.agent_map[agent_name] = agent  # Use generated agent name as key
             tasks.append(agent.run())
 
         self._save_state() # Save initial state after agents are created

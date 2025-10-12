@@ -47,8 +47,18 @@ class CodingAgent(ABC):
                 self.orchestrator.on_agent_status_update(self)
 
     @abstractmethod
+    async def setup_scripts(self):
+        """Setup the script files."""
+        pass
+
+    @abstractmethod
     async def plan(self):
         """Create a plan for implementation."""
+        pass
+
+    @abstractmethod
+    async def write_tests(self):
+        """Write unit tests."""
         pass
 
     @abstractmethod
@@ -57,12 +67,12 @@ class CodingAgent(ABC):
         pass
 
     @abstractmethod
-    async def test(self) -> bool:
-        """Test the implementation and return True if tests pass."""
+    async def test(self) -> str:
+        """Test the implementation and return test results summary."""
         pass
 
     @abstractmethod
-    async def debug(self):
+    async def debug(self, test_summary: str):
         """Debug the implementation if tests fail."""
         pass
 
@@ -80,14 +90,21 @@ class CodingAgent(ABC):
         """
         Execute the full implement -> test -> debug loop.
         """
+        self.status = "setting up scripts"
+        await self.setup_scripts()
+
         self.status = "planning"
         await self.plan()
+
+        self.status = "writing tests"
+        await self.write_tests()
 
         self.status = "implementing"
         await self.implement()
 
         self.status = "testing"
-        while not await self.test():
+        test_result = await self.test()
+        while test_result != "PASSED":
             if self.debug_attempts >= self.MAX_DEBUG_ATTEMPTS:
                 self._log(f"Max debug attempts ({self.MAX_DEBUG_ATTEMPTS}) reached for {self.component['name']}. Manual intervention required.")
                 print(f"[ATTENTION] Max debug attempts reached for {self.component['name']}. Please review logs and code for manual debugging.")
@@ -97,8 +114,9 @@ class CodingAgent(ABC):
             self.debug_attempts += 1
             self._log(f"Debug attempt {self.debug_attempts}/{self.MAX_DEBUG_ATTEMPTS} for {self.component['name']}.")
             self.status = "debugging"
-            await self.debug()
+            await self.debug(test_result)
             self.status = "testing" # After debug, re-test
+            test_result = await self.test()
 
         if self.status != "paused_for_guidance":
             self.status = "completed"
@@ -116,3 +134,12 @@ class CodingAgent(ABC):
         This should be implemented by concrete agents.
         """
         return "No specific changes summary available from base agent."
+
+    def get_llm_backend_name(self) -> str:
+        """
+        Returns the name of the underlying LLM backend.
+        Should be implemented by concrete agents.
+        """
+        if hasattr(self, 'llm_backend') and self.llm_backend:
+            return self.llm_backend.__class__.__name__
+        return "Unknown"
