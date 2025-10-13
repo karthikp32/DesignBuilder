@@ -8,7 +8,7 @@ import asyncio
 import os
 from .base import CodingAgent
 from designbuilder.llm_backends.gemini import GeminiBackend
-from designbuilder.prompts import prompts
+from designbuilder.prompts.prompts import Prompts
 
 class PythonAgent(CodingAgent):
     """
@@ -58,11 +58,11 @@ class PythonAgent(CodingAgent):
         """
         self._log("Planning Python component...")
 
-        prompt = prompts.get_plan_prompt(self.component['description'])
+        prompt = Prompts.get_plan_prompt(self.component['description'])
 
         # Send the structured planning prompt to the LLM backend (Gemini CLI, Codex, etc.)
         self._plan = await self.llm_backend.send_prompt(prompt)
-
+        print(f"Plan: {self._plan}")
         # Log for visibility
         self._log(f"Plan created:\n{self._plan}")
 
@@ -81,11 +81,11 @@ class PythonAgent(CodingAgent):
         """
         self._log("Writing unit tests...")
 
-        prompt = prompts.get_write_tests_prompt(self.component['description'])
+        prompt = Prompts.get_write_tests_prompt(self.component['description'])
 
         # Send prompt to the LLM backend (Gemini CLI, Codex, etc.)
         test_code = await self.llm_backend.send_prompt(prompt)
-        
+        print(f"Test code: {test_code}")
         # Extract code from response and write to file
         code = self._extract_code(test_code)
         with open(self.test_file_path, "w") as f:
@@ -94,9 +94,9 @@ class PythonAgent(CodingAgent):
 
     async def implement(self):
         self._log("Implementing Python component...")
-        prompt = prompts.get_implement_prompt(self._plan)
+        prompt = Prompts.get_implement_prompt(self._plan)
         implementation_code = await self.llm_backend.send_prompt(prompt)
-        
+        print(f"implementation_code: {implementation_code}")
         # Extract code from response and write to file
         code = self._extract_code(implementation_code)
         self._implementation = code  # Store the implementation
@@ -116,7 +116,8 @@ class PythonAgent(CodingAgent):
         stdout, stderr = await result.communicate()
 
         test_output = stdout.decode() + stderr.decode()
-        
+        print(f"test_output: {test_output}")
+
         if result.returncode == 0:
             self._log("Tests passed.")
             return "PASSED"
@@ -126,9 +127,11 @@ class PythonAgent(CodingAgent):
 
     async def debug(self, test_summary: str):
         self._log("Debugging Python component...")
-        prompt = prompts.get_debug_prompt(self._implementation, test_summary)
+        prompt = Prompts.get_debug_prompt(self._implementation, test_summary)
         
         fixed_code = await self.llm_backend.send_prompt(prompt)
+        print(f"fixed_code: {fixed_code}")
+
         
         # Extract code from response and write to file
         code = self._extract_code(fixed_code)
@@ -139,7 +142,7 @@ class PythonAgent(CodingAgent):
 
     async def guide(self, guidance: str):
         self._log(f"User guidance received: {guidance}")
-        prompt = prompts.get_guide_prompt(guidance, self._implementation)
+        prompt = Prompts.get_guide_prompt(guidance, self._implementation)
         
         guided_code = await self.llm_backend.send_prompt(prompt)
         

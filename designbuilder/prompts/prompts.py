@@ -2,7 +2,7 @@ class Prompts:
     """
     Prompts for the DesignBuilder project.
     """
-
+    @staticmethod
     def get_plan_prompt(description: str) -> str:
         return f"""
     You are a senior software engineer planning the implementation of a code component.
@@ -24,7 +24,7 @@ class Prompts:
     - Be concise and technical.
     - Use bullet points or numbered steps only.
     """
-
+    @staticmethod
     def get_write_tests_prompt(description: str) -> str:
         return f"""
     You are an experienced Python developer.
@@ -39,6 +39,7 @@ class Prompts:
     - Return only valid Python test code, with no comments, explanations, or markdown formatting.
     """
 
+    @staticmethod
     def get_implement_prompt(plan: str) -> str:
         return f"""Implement the following component in Python based on this plan:
     {plan}
@@ -50,6 +51,7 @@ class Prompts:
     - Return only valid Python code (no markdown, comments, or explanations).
     """
 
+    @staticmethod
     def get_debug_prompt(implementation: str, test_summary: str) -> str:
         return f"""The following Python implementation failed its tests:
 
@@ -61,6 +63,7 @@ class Prompts:
     Analyze the root cause of the failures, determine what is wrong, and fix the code following a scientific method approach (hypothesize, experiment, conclude). Return only the corrected Python code, without explanations, comments, or markdown formatting.
     """
 
+    @staticmethod
     def get_guide_prompt(guidance: str, implementation: str) -> str:
         return f"""The user has provided the following guidance:
 
