@@ -29,7 +29,7 @@ class PythonAgent(CodingAgent):
         # Sanitize component name for filename
         sanitized_name = "".join(c for c in self.component['name'] if c.isalnum() or c in (' ', '_')).rstrip()
         self.sanitized_name = sanitized_name.replace(' ', '_').lower()
-        self.output_file_path = os.path.join(self.class_dir, f"{self.sanitized_name}.py")
+        self.class_file_path = os.path.join(self.class_dir, f"{self.sanitized_name}.py")
         self.test_file_path = os.path.join(self.tests_dir, f"test_{self.sanitized_name}.py")
 
     def _extract_code(self, markdown_string: str) -> str:
@@ -72,9 +72,9 @@ class PythonAgent(CodingAgent):
         with open(self.test_file_path, "w") as f:
             pass
         self._log(f"Created empty test file: {self.test_file_path}")
-        with open(self.output_file_path, "w") as f:
+        with open(self.class_file_path, "w") as f:
             pass
-        self._log(f"Created empty implementation file: {self.output_file_path}")
+        self._log(f"Created empty implementation file: {self.class_file_path}")
 
     async def implement(self):
         self._log("Implementing Python component...")
@@ -83,9 +83,9 @@ class PythonAgent(CodingAgent):
         # Extract code from response and write to file
         code = self._extract_code(implementation_code)
         self._implementation = code  # Store the implementation
-        with open(self.output_file_path, "w") as f:
+        with open(self.class_file_path, "w") as f:
             f.write(code)
-        self._log(f"Generated code written to {self.output_file_path}")
+        self._log(f"Generated code written to {self.class_file_path}")
 
     async def write_tests(self):
         """
@@ -93,35 +93,49 @@ class PythonAgent(CodingAgent):
         """
         self._log("Writing unit tests...")
 
-        prompt = Prompts.get_write_tests_prompt(self.component['description'])
+        prompt = Prompts.get_write_tests_prompt(self._implementation, self.component['name'])
 
         # Send prompt to the LLM backend (Gemini CLI, Codex, etc.)
-        test_code = await self.llm_backend.send_prompt(prompt)
+        self.test_code = await self.llm_backend.send_prompt(prompt)
         # Extract code from response and write to file
-        code = self._extract_code(test_code)
+        self.test_code = self._extract_code(self.test_code)
         with open(self.test_file_path, "w") as f:
-            f.write(code)
+            f.write(self.test_code)
         self._log(f"Unit tests written to {self.test_file_path}")
 
     async def test(self) -> str:
         self._log("Testing Python component...")
-        
+
+        # Copy current environment
+        env = os.environ.copy()
+
+        # Add output/ and all its subdirectories to PYTHONPATH
+        paths = [self.output_dir]
+        for root, dirs, _ in os.walk(self.output_dir):
+            for d in dirs:
+                paths.append(os.path.join(root, d))
+        env["PYTHONPATH"] = os.pathsep.join(paths)
+
         # Run pytest on the test file
         result = await asyncio.create_subprocess_exec(
-            "pytest", self.test_file_path, "-v",
+            "pytest",
+            self.test_file_path,
+            "-v",
+            cwd=self.output_dir,  # run from output/
             stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            stderr=asyncio.subprocess.PIPE,
+            env=env
         )
-        stdout, stderr = await result.communicate()
 
+        stdout, stderr = await result.communicate()
         test_output = stdout.decode() + stderr.decode()
 
         if result.returncode == 0:
             self._log("Tests passed.")
-            return "PASSED"
+            return "PASSED", ""
         else:
             self._log(f"Tests failed:\n{test_output}")
-            return "FAILED"
+            return "FAILED", "\n".join(test_output.splitlines()[-40:])
 
     async def debug(self, test_summary: str):
         self._log("Debugging Python component...")
@@ -134,9 +148,9 @@ class PythonAgent(CodingAgent):
         # Extract code from response and write to file
         code = self._extract_code(fixed_code)
         self._implementation = code  # Update stored implementation
-        with open(self.output_file_path, "w") as f:
+        with open(self.class_file_path, "w") as f:
             f.write(code)
-        self._log(f"Fixed code written to {self.output_file_path}")
+        self._log(f"Fixed code written to {self.class_file_path}")
 
     async def guide(self, guidance: str):
         self._log(f"User guidance received: {guidance}")
@@ -147,9 +161,9 @@ class PythonAgent(CodingAgent):
         # Extract code from response and write to file
         code = self._extract_code(guided_code)
         self._implementation = code  # Update stored implementation
-        with open(self.output_file_path, "w") as f:
+        with open(self.class_file_path, "w") as f:
             f.write(code)
-        self._log(f"Code updated based on guidance and written to {self.output_file_path}")
+        self._log(f"Code updated based on guidance and written to {self.class_file_path}")
         self.debug_attempts = 0 # Reset debug attempts after guidance
         self.status = "testing" # Set status to testing to resume loop
 
@@ -190,7 +204,7 @@ class PythonAgent(CodingAgent):
 
     def get_changes_summary(self) -> str:
         summary = f"Agent Status (after {self.debug_attempts} debug attempts):\n" \
-                  f"- Output file: {self.output_file_path}\n" \
+                  f"- Output file: {self.class_file_path}\n" \
                   f"- Test file: {self.test_file_path}\n" \
                   f"- Plan: {self._plan[:200]}...\n" \
                   f"- Current Implementation:\n```python\n{self._implementation}\n```\n"
