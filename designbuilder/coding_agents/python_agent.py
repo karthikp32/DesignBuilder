@@ -62,7 +62,6 @@ class PythonAgent(CodingAgent):
 
         # Send the structured planning prompt to the LLM backend (Gemini CLI, Codex, etc.)
         self._plan = await self.llm_backend.send_prompt(prompt)
-        print(f"Plan: {self._plan}")
         # Log for visibility
         self._log(f"Plan created:\n{self._plan}")
 
@@ -85,7 +84,6 @@ class PythonAgent(CodingAgent):
 
         # Send prompt to the LLM backend (Gemini CLI, Codex, etc.)
         test_code = await self.llm_backend.send_prompt(prompt)
-        print(f"Test code: {test_code}")
         # Extract code from response and write to file
         code = self._extract_code(test_code)
         with open(self.test_file_path, "w") as f:
@@ -96,7 +94,6 @@ class PythonAgent(CodingAgent):
         self._log("Implementing Python component...")
         prompt = Prompts.get_implement_prompt(self._plan)
         implementation_code = await self.llm_backend.send_prompt(prompt)
-        print(f"implementation_code: {implementation_code}")
         # Extract code from response and write to file
         code = self._extract_code(implementation_code)
         self._implementation = code  # Store the implementation
@@ -116,7 +113,6 @@ class PythonAgent(CodingAgent):
         stdout, stderr = await result.communicate()
 
         test_output = stdout.decode() + stderr.decode()
-        print(f"test_output: {test_output}")
 
         if result.returncode == 0:
             self._log("Tests passed.")

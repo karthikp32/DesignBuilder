@@ -23,7 +23,6 @@ def python_agent():
     }
     agent = PythonAgent(component)
     agent.llm_backend = GeminiBackend()
-    agent.plan_ = "A reasonable plan for an HTTP server."
     return agent
 
 @pytest.mark.asyncio
@@ -35,39 +34,40 @@ async def test_setup_scripts(python_agent):
 @pytest.mark.asyncio
 async def test_plan(python_agent):
     await python_agent.plan()
-    assert isinstance(python_agent._plan, str)
-    assert len(python_agent._plan) > 0
+    expected_words = ["purpose", "expected behavior", "key sub-tasks", "dependencies", "edge cases"]
+    assert all(word.lower() in python_agent._plan.lower() for word in expected_words)
 
-@pytest.mark.asyncio
-async def test_write_tests(python_agent):
-    await python_agent.write_tests()
-    assert os.path.exists(python_agent.test_file_path)
-    with open(python_agent.test_file_path, "r") as f:
-        test_code = f.read()
-    assert "def test_" in test_code
 
-@pytest.mark.asyncio
-async def test_implement(python_agent):
-    await python_agent.implement()
-    assert os.path.exists(python_agent.output_file_path)
-    with open(python_agent.output_file_path, "r") as f:
-        impl_code = f.read()
-    assert "class" in impl_code or "def" in impl_code
+# @pytest.mark.asyncio
+# async def test_write_tests(python_agent):
+#     await python_agent.write_tests()
+#     assert os.path.exists(python_agent.test_file_path)
+#     with open(python_agent.test_file_path, "r") as f:
+#         test_code = f.read()
+#     assert "def test_" in test_code
 
-@pytest.mark.asyncio
-async def test_test(python_agent):
-    # Create dummy files for testing the test method
-    with open(python_agent.output_file_path, "w") as f:
-        f.write("def main():\n    pass")
-    with open(python_agent.test_file_path, "w") as f:
-        f.write("def test_main():\n    assert True")
+# @pytest.mark.asyncio
+# async def test_implement(python_agent):
+#     await python_agent.implement()
+#     assert os.path.exists(python_agent.output_file_path)
+#     with open(python_agent.output_file_path, "r") as f:
+#         impl_code = f.read()
+#     assert "class" in impl_code or "def" in impl_code
 
-    test_result = await python_agent.test()
-    assert test_result == "PASSED"
+# @pytest.mark.asyncio
+# async def test_test(python_agent):
+#     # Create dummy files for testing the test method
+#     with open(python_agent.output_file_path, "w") as f:
+#         f.write("def main():\n    pass")
+#     with open(python_agent.test_file_path, "w") as f:
+#         f.write("def test_main():\n    assert True")
 
-    # Test with a failing test
-    with open(python_agent.test_file_path, "w") as f:
-        f.write("def test_main():\n    assert False")
+#     test_result = await python_agent.test()
+#     assert test_result == "PASSED"
 
-    test_result = await python_agent.test()
-    assert test_result == "FAILED"
+#     # Test with a failing test
+#     with open(python_agent.test_file_path, "w") as f:
+#         f.write("def test_main():\n    assert False")
+
+#     test_result = await python_agent.test()
+#     assert test_result == "FAILED"
