@@ -2,6 +2,34 @@ class Prompts:
     """
     Prompts for the DesignBuilder project.
     """
+
+    @staticmethod
+    def get_design_doc_extraction_prompt(full_text: str) -> str:
+        return f"""You are an expert system architect. Extract all architectural components from the following system design document(s).
+
+    For each component, provide:
+    - name: the component's name
+    - description: a detailed summary of its responsibilities, behavior, and role in the system
+    - language: the main programming language or technology used
+
+    Example:
+
+    - name: UserService
+    description: Manages user accounts including registration, authentication, profile updates, and account deletion. Ensures secure password storage and validation, and interfaces with notification and analytics subsystems.
+    language: Python
+
+    - name: PaymentGateway
+    description: Handles all payment processing including credit card transactions, refunds, and recurring billing. Integrates with external payment providers and logs all transactions for auditing purposes.
+    language: null
+
+    Now extract components from the document below:
+
+    {full_text}
+
+    Return only a valid YAML list with keys: name, description, and language. Each description should be detailed and informative.
+
+        """
+
     @staticmethod
     def get_plan_prompt(description: str) -> str:
         return f"""

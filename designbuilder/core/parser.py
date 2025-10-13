@@ -9,6 +9,7 @@ import yaml
 import docx
 from pypdf import PdfReader
 from designbuilder.llm_backends.gemini import GeminiBackend
+from designbuilder.prompts.prompts import Prompts
 
 async def _read_file_content(file_path: str) -> str:
     """Reads the content of a file based on its extension."""
@@ -50,19 +51,10 @@ async def parse_design_docs(design_docs: list[str]) -> str:
     if not full_text.strip():
         return ""
 
-    prompt = f"""Analyze the following system design document(s) and extract the architectural components.
-
-For each component, provide its name, a detailed description of its responsibilities, and the programming language or technology it uses.
-
-Please provide the output in YAML format as a list of objects, where each object has the keys "name", "description", and "language".
-
----
-
-{full_text}
-"""
+    prompt = Prompts.get_design_doc_extraction_prompt(full_text)
 
     llm_backend = GeminiBackend()
-    yaml_output = await llm_backend.generate_content(prompt)
+    yaml_output = await llm_backend.send_prompt(prompt)
 
     try:
         # The LLM might return the YAML within a code block, so we need to extract it.
