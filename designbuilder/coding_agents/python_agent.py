@@ -21,6 +21,7 @@ class PythonAgent(CodingAgent):
         self.class_dir = os.path.join(self.output_dir, "classes")
         self.tests_dir = os.path.join(self.output_dir, "tests")
         os.makedirs(self.output_dir, exist_ok=True)
+        os.makedirs(self.class_dir, exist_ok=True)
         os.makedirs(self.tests_dir, exist_ok=True)
         self._plan = ""  # Store the plan from plan() function
         self._implementation = ""  # Store the latest implementation
