@@ -17,17 +17,19 @@ class PythonAgent(CodingAgent):
     def __init__(self, component: dict, orchestrator=None):
         super().__init__(component, orchestrator)
         self.llm_backend = GeminiBackend()
-        self.output_dir = "/home/karthik/repos/DesignBuilder/designbuilder/output"
+        self.output_dir = "/home/karthik/repos/DesignBuilder/designbuilder/output/"
+        self.class_dir = os.path.join(self.output_dir, "classes")
         self.tests_dir = os.path.join(self.output_dir, "tests")
         os.makedirs(self.output_dir, exist_ok=True)
         os.makedirs(self.tests_dir, exist_ok=True)
         self._plan = ""  # Store the plan from plan() function
         self._implementation = ""  # Store the latest implementation
+        self.test_code = "" 
 
         # Sanitize component name for filename
         sanitized_name = "".join(c for c in self.component['name'] if c.isalnum() or c in (' ', '_')).rstrip()
         self.sanitized_name = sanitized_name.replace(' ', '_').lower()
-        self.output_file_path = os.path.join(self.output_dir, f"{self.sanitized_name}.py")
+        self.output_file_path = os.path.join(self.class_dir, f"{self.sanitized_name}.py")
         self.test_file_path = os.path.join(self.tests_dir, f"test_{self.sanitized_name}.py")
 
     def _extract_code(self, markdown_string: str) -> str:
@@ -74,6 +76,17 @@ class PythonAgent(CodingAgent):
             pass
         self._log(f"Created empty implementation file: {self.output_file_path}")
 
+    async def implement(self):
+        self._log("Implementing Python component...")
+        prompt = Prompts.get_implement_prompt(self._plan)
+        implementation_code = await self.llm_backend.send_prompt(prompt)
+        # Extract code from response and write to file
+        code = self._extract_code(implementation_code)
+        self._implementation = code  # Store the implementation
+        with open(self.output_file_path, "w") as f:
+            f.write(code)
+        self._log(f"Generated code written to {self.output_file_path}")
+
     async def write_tests(self):
         """
         Generate pytest-style unit tests for the current component.
@@ -89,17 +102,6 @@ class PythonAgent(CodingAgent):
         with open(self.test_file_path, "w") as f:
             f.write(code)
         self._log(f"Unit tests written to {self.test_file_path}")
-
-    async def implement(self):
-        self._log("Implementing Python component...")
-        prompt = Prompts.get_implement_prompt(self._plan)
-        implementation_code = await self.llm_backend.send_prompt(prompt)
-        # Extract code from response and write to file
-        code = self._extract_code(implementation_code)
-        self._implementation = code  # Store the implementation
-        with open(self.output_file_path, "w") as f:
-            f.write(code)
-        self._log(f"Generated code written to {self.output_file_path}")
 
     async def test(self) -> str:
         self._log("Testing Python component...")
