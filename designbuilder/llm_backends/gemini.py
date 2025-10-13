@@ -16,9 +16,9 @@ class GeminiBackend(LLMBackend):
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable not set.")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
+        self.model = genai.GenerativeModel('gemini-2.5-pro')
 
-    async def generate_content(self, prompt: str) -> str:
+    async def send_prompt(self, prompt: str) -> str:
         """Generates content using the Gemini API."""
         response = await self.model.generate_content_async(prompt)
         return response.text

@@ -10,6 +10,6 @@ class LLMBackend(ABC):
     Abstract interface for a large language model backend.
     """
     @abstractmethod
-    async def generate_content(self, prompt: str) -> str:
+    async def send_prompt(self, prompt: str) -> str:
         """Generate content from a prompt."""
         pass

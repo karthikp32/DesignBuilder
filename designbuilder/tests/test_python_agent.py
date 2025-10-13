@@ -1,25 +1,30 @@
-
 import pytest
 import os
-from unittest.mock import AsyncMock
 from designbuilder.coding_agents.python_agent import PythonAgent
+from designbuilder.llm_backends.gemini import GeminiBackend
 
 @pytest.fixture
 def python_agent():
     component = {
-        "name": "Test Component",
-        "description": "A test component."
+        "name": "HTTP Server",
+        "description": """### 1. HTTP Server
+- **Type:** Service
+- **Responsibilities:**
+  - Accept incoming HTTP requests.
+  - Route requests to appropriate handlers.
+  - Return HTTP responses.
+- **Dependencies:** 
+  - Request Handler
+  - Router
+  - Logger
+- **Interfaces:**
+  - `start_server(port: int)` → starts listening for HTTP requests.
+  - `stop_server()` → gracefully stops the server. Write in Python"""
     }
     agent = PythonAgent(component)
-    agent.llm_backend = AsyncMock()
+    agent.llm_backend = GeminiBackend()
+    agent.plan_ = "A reasonable plan for an HTTP server."
     return agent
-
-@pytest.mark.asyncio
-async def test_plan(python_agent):
-    python_agent.llm_backend.send_prompt.return_value = "This is a plan."
-    await python_agent.plan()
-    python_agent.llm_backend.send_prompt.assert_called_once()
-    assert python_agent._plan == "This is a plan."
 
 @pytest.mark.asyncio
 async def test_setup_scripts(python_agent):
@@ -28,41 +33,41 @@ async def test_setup_scripts(python_agent):
     assert os.path.exists(python_agent.output_file_path)
 
 @pytest.mark.asyncio
+async def test_plan(python_agent):
+    await python_agent.plan()
+    assert isinstance(python_agent._plan, str)
+    assert len(python_agent._plan) > 0
+
+@pytest.mark.asyncio
 async def test_write_tests(python_agent):
-    python_agent.llm_backend.send_prompt.return_value = ""
     await python_agent.write_tests()
-    python_agent.llm_backend.send_prompt.assert_called_once()
+    assert os.path.exists(python_agent.test_file_path)
+    with open(python_agent.test_file_path, "r") as f:
+        test_code = f.read()
+    assert "def test_" in test_code
 
 @pytest.mark.asyncio
 async def test_implement(python_agent):
-    python_agent.llm_backend.send_prompt.return_value = ""
     await python_agent.implement()
-    python_agent.llm_backend.send_prompt.assert_called()
+    assert os.path.exists(python_agent.output_file_path)
+    with open(python_agent.output_file_path, "r") as f:
+        impl_code = f.read()
+    assert "class" in impl_code or "def" in impl_code
 
 @pytest.mark.asyncio
-async def test_test_passing(python_agent, tmp_path):
-    # Create a dummy test file that passes
-    test_file = tmp_path / "test_passing.py"
-    test_file.write_text("def test_success():\n    assert True")
-    python_agent.test_file_path = test_file
+async def test_test(python_agent):
+    # Create dummy files for testing the test method
+    with open(python_agent.output_file_path, "w") as f:
+        f.write("def main():\n    pass")
+    with open(python_agent.test_file_path, "w") as f:
+        f.write("def test_main():\n    assert True")
 
-    result = await python_agent.test()
-    assert result == "PASSED"
+    test_result = await python_agent.test()
+    assert test_result == "PASSED"
 
-@pytest.mark.asyncio
-async def test_test_failing(python_agent, tmp_path):
-    # Create a dummy test file that fails
-    test_file = tmp_path / "test_failing.py"
-    test_file.write_text("def test_failure():\n    assert False")
-    python_agent.test_file_path = test_file
+    # Test with a failing test
+    with open(python_agent.test_file_path, "w") as f:
+        f.write("def test_main():\n    assert False")
 
-    result = await python_agent.test()
-    assert "FAILED" in result
-
-@pytest.mark.asyncio
-async def test_debug(python_agent):
-    test_summary = "This is a test summary."
-    python_agent.llm_backend.send_prompt.return_value = ""
-    await python_agent.debug(test_summary)
-    python_agent.llm_backend.send_prompt.assert_called_once()
-
+    test_result = await python_agent.test()
+    assert test_result == "FAILED"

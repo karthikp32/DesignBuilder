@@ -1,5 +1,3 @@
-
-
 """
 Python Coding Agent
 
@@ -9,7 +7,8 @@ writing, testing, and debugging Python code.
 import asyncio
 import os
 from .base import CodingAgent
-from designbuilder.llm_clis.gemini_cli import GeminiCliBackend
+from designbuilder.llm_backends.gemini import GeminiBackend
+from designbuilder.prompts import prompts
 
 class PythonAgent(CodingAgent):
     """
@@ -17,7 +16,7 @@ class PythonAgent(CodingAgent):
     """
     def __init__(self, component: dict, orchestrator=None):
         super().__init__(component, orchestrator)
-        self.llm_backend = GeminiCliBackend()
+        self.llm_backend = GeminiBackend()
         self.output_dir = "/home/karthik/repos/DesignBuilder/designbuilder/output"
         self.tests_dir = os.path.join(self.output_dir, "tests")
         os.makedirs(self.output_dir, exist_ok=True)
@@ -53,12 +52,19 @@ class PythonAgent(CodingAgent):
         # If no code blocks found, return the original string (might be plain code)
         return markdown_string.strip()
 
-
     async def plan(self):
+        """
+        Generate a concise, actionable implementation plan for the component.
+        """
         self._log("Planning Python component...")
-        prompt = f"Create a plan to implement the following component: {self.component['description']}"
+
+        prompt = prompts.get_plan_prompt(self.component['description'])
+
+        # Send the structured planning prompt to the LLM backend (Gemini CLI, Codex, etc.)
         self._plan = await self.llm_backend.send_prompt(prompt)
-        self._log(f"Plan created: {self._plan}")
+
+        # Log for visibility
+        self._log(f"Plan created:\n{self._plan}")
 
     async def setup_scripts(self):
         self._log("Setting up script files...")
@@ -70,8 +76,14 @@ class PythonAgent(CodingAgent):
         self._log(f"Created empty implementation file: {self.output_file_path}")
 
     async def write_tests(self):
+        """
+        Generate pytest-style unit tests for the current component.
+        """
         self._log("Writing unit tests...")
-        prompt = f"Write unit tests for the following component: {self.component['description']}. Return only the Python test code without any explanations or markdown formatting."
+
+        prompt = prompts.get_write_tests_prompt(self.component['description'])
+
+        # Send prompt to the LLM backend (Gemini CLI, Codex, etc.)
         test_code = await self.llm_backend.send_prompt(prompt)
         
         # Extract code from response and write to file
@@ -82,7 +94,7 @@ class PythonAgent(CodingAgent):
 
     async def implement(self):
         self._log("Implementing Python component...")
-        prompt = f"Implement the following component in Python, based on this plan: {self._plan}. Return only the Python code without any explanations or markdown formatting."
+        prompt = prompts.get_implement_prompt(self._plan)
         implementation_code = await self.llm_backend.send_prompt(prompt)
         
         # Extract code from response and write to file
@@ -110,18 +122,11 @@ class PythonAgent(CodingAgent):
             return "PASSED"
         else:
             self._log(f"Tests failed:\n{test_output}")
-            return test_output
+            return "FAILED"
 
     async def debug(self, test_summary: str):
         self._log("Debugging Python component...")
-        prompt = f"""The tests failed for this code:
-
-{self._implementation}
-
-Test failure summary:
-{test_summary}
-
-Please fix the code based on these test failures. Return only the corrected Python code without any explanations or markdown formatting."""
+        prompt = prompts.get_debug_prompt(self._implementation, test_summary)
         
         fixed_code = await self.llm_backend.send_prompt(prompt)
         
@@ -134,15 +139,7 @@ Please fix the code based on these test failures. Return only the corrected Pyth
 
     async def guide(self, guidance: str):
         self._log(f"User guidance received: {guidance}")
-        prompt = f"""The user has provided the following guidance:
-
-{guidance}
-
-The current code is:
-
-{self._implementation}
-
-Please incorporate this guidance to fix the code. Return only the corrected Python code without any explanations or markdown formatting."""
+        prompt = prompts.get_guide_prompt(guidance, self._implementation)
         
         guided_code = await self.llm_backend.send_prompt(prompt)
         
@@ -200,7 +197,7 @@ Please incorporate this guidance to fix the code. Return only the corrected Pyth
 
     def get_llm_backend_name(self) -> str:
         """Returns a user-friendly name for the LLM backend."""
-        return "Gemini CLI"
+        return "Gemini"
 
     def _log(self, message: str):
         """Log a message to the agent's log file."""
