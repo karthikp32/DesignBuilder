@@ -96,14 +96,15 @@ class CodingAgent(ABC):
         self.status = "planning"
         await self.plan()
 
-        self.status = "writing tests"
-        await self.write_tests()
-
         self.status = "implementing"
         await self.implement()
 
+        self.status = "writing tests"
+        await self.write_tests()
+
+
         self.status = "testing"
-        test_result = await self.test()
+        test_result, test_summary = await self.test()
         while test_result != "PASSED":
             if self.debug_attempts >= self.MAX_DEBUG_ATTEMPTS:
                 self._log(f"Max debug attempts ({self.MAX_DEBUG_ATTEMPTS}) reached for {self.component['name']}. Manual intervention required.")
@@ -114,9 +115,9 @@ class CodingAgent(ABC):
             self.debug_attempts += 1
             self._log(f"Debug attempt {self.debug_attempts}/{self.MAX_DEBUG_ATTEMPTS} for {self.component['name']}.")
             self.status = "debugging"
-            await self.debug(test_result)
+            await self.debug(test_summary)
             self.status = "testing" # After debug, re-test
-            test_result = await self.test()
+            test_result, test_summary = await self.test()
 
         if self.status != "paused_for_guidance":
             self.status = "completed"
