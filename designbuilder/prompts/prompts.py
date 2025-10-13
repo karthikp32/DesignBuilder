@@ -24,20 +24,6 @@ class Prompts:
     - Be concise and technical.
     - Use bullet points or numbered steps only.
     """
-    @staticmethod
-    def get_write_tests_prompt(description: str) -> str:
-        return f"""
-    You are an experienced Python developer.
-
-    Write comprehensive unit tests for the following component:
-    {description}
-
-    Requirements:
-    - Use pytest style.
-    - Cover normal, edge, and error cases.
-    - Include setup and teardown if applicable.
-    - Return only valid Python test code, with no comments, explanations, or markdown formatting.
-    """
 
     @staticmethod
     def get_implement_prompt(plan: str) -> str:
@@ -49,6 +35,23 @@ class Prompts:
     - Use clear, production-quality code.
     - Include necessary imports and helper functions.
     - Return only valid Python code (no markdown, comments, or explanations).
+    - Write elegant, efficient, and maintainable code using a minimalist approach.
+    """
+
+    @staticmethod
+    def get_write_tests_prompt(implementation: str, component: str) -> str:
+        return f"""
+    You are an experienced Python developer.
+
+    Write comprehensive unit tests for the component given this implementation:
+    {implementation}
+
+    Requirements:
+    - Use pytest style.
+    - Cover normal, edge, and failure cases. 
+    - Keep tests elegant, minimal, and focused on verifying correctness and robustness.
+    - Include setup and teardown if necessary.
+    - Return only valid Python test code with no markdown, comments, or explanations.
     """
 
     @staticmethod
@@ -60,7 +63,11 @@ class Prompts:
     Test failure summary:
     {test_summary}
 
-    Analyze the root cause of the failures, determine what is wrong, and fix the code following a scientific method approach (hypothesize, experiment, conclude). Return only the corrected Python code, without explanations, comments, or markdown formatting.
+    Perform a root cause analysis to identify why the failures occurred. 
+    Use a scientific method mindset: hypothesize, reason through likely causes, and apply only necessary fixes.
+    Revise the implementation to produce an elegant, minimalist, and correct solution.
+
+    Return only the corrected Python code with no markdown, comments, or explanations.
     """
 
     @staticmethod
