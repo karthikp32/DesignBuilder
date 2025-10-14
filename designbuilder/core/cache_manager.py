@@ -5,8 +5,8 @@ CACHE_FILE = "/home/karthik/repos/DesignBuilder/designbuilder/cache/plan_cache.j
 class CacheManager:
 
     @staticmethod
-    def _hash_doc(doc_text, model, prompt_version):
-        key = f"{model}:{prompt_version}:{doc_text.strip()}".encode()
+    def _hash_doc(doc_text):
+        key = f"{doc_text.strip()}".encode()
         return hashlib.sha256(key).hexdigest()
 
     @staticmethod
@@ -16,3 +16,4 @@ class CacheManager:
     @staticmethod
     def _save_cache(cache):
         json.dump(cache, open(CACHE_FILE, "w"), indent=2)
+

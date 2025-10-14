@@ -47,24 +47,28 @@ class Orchestrator:
         Main entrypoint to start the build process.
         """
         print("Orchestrator starting...")
-        
-        text_in_design_doc, components_desc_yaml = await parser.parse_design_docs(self.design_docs)
-        num_of_components = len(yaml.safe_load(components_plans_yaml))
-        print(f"Found {num_of_components} components.")
 
-        planner = Planner(design_doc_text=text_in_design_doc)
-        components_plans_yaml = await planner.plan_all(components_desc_yaml=components_desc_yaml)
-        self.components = yaml.safe_load(components_plans_yaml) if components_plans_yaml else []
+        planner = Planner(design_docs=self.design_docs)
+        self.components = await planner.plan_all()
+        
+        if not self.components:
+            print("No components found or generated.")
+            self.components = []
+            return
+
+        print(f"Found {len(self.components)} components.")
 
         tasks = []
         self.agents = []
         self.agent_map = {}
 
         for component in self.components:
-            agent = PythonAgent(component, orchestrator=self) # Pass orchestrator to agent
-            agent_name = self._generate_agent_name()  # Generate unique agent name
+            agent = PythonAgent(component, orchestrator=self)
+            if 'plan' in component:
+                agent._plan = component['plan']
+            
+            agent_name = self._generate_agent_name()
 
-            # Apply loaded state if available (try both old component name and new agent name)
             loaded_state = None
             if component['name'] in self._loaded_agent_states:
                 loaded_state = self._loaded_agent_states[component['name']]
@@ -76,17 +80,16 @@ class Orchestrator:
                 agent.debug_attempts = loaded_state.get("debug_attempts", 0)
 
             self.agents.append(agent)
-            self.agent_map[agent_name] = agent  # Use generated agent name as key
+            self.agent_map[agent_name] = agent
             tasks.append(agent.run())
 
-        self._save_state() # Save initial state after agents are created
+        self._save_state()
 
-        # Run all agents in parallel
         await asyncio.gather(*tasks)
 
         print("All agents have completed their work.")
         self._run_evals()
-        self._save_state() # Save final state
+        self._save_state()
 
     def get_agent_names(self) -> list[str]:
         """

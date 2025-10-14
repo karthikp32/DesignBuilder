@@ -38,20 +38,23 @@ async def _read_file_content(file_path: str) -> str:
 
     return content
 
-async def parse_design_docs(design_docs: list[str]) -> str:
+
+async def parse_design_docs(design_docs: list[str], design_doc_text: str = None) -> str:
     """
     Reads design documents, uses an LLM to extract components,
     and returns them as a YAML formatted string.
     """
     print(f"Parsing design documents: {design_docs}")
 
-    full_text = ""
-    for doc_path in design_docs:
-        full_text += await _read_file_content(doc_path) + "\n\n"
+    full_text = design_doc_text
+    if not full_text:
+        for doc_path in design_docs:
+            full_text += await _read_file_content(doc_path) + "\n\n"
     
     #TODO: modify this to return list of full texts
     if not full_text.strip():
         return ""
+
 
     prompt = Prompts.get_design_doc_extraction_prompt(full_text)
 
