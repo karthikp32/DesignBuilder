@@ -30,6 +30,32 @@ class Prompts:
 
         """
 
+    def get_unified_plan_prompt(components_desc_yaml) -> str:
+        return f"""
+    You are a senior software engineer planning implementations for multiple components.
+
+    Each component has name and description.
+
+    For each, provide:
+    - purpose
+    - key sub_tasks
+    - dependencies
+    - edge_cases
+    - complexity (Low/Medium/High)
+
+    Return **YAML list**:
+    - name: <component name>
+    plan:
+        purpose: ...
+        sub_tasks: [...]
+        dependencies: [...]
+        edge_cases: [...]
+        complexity: Low/Medium/High
+
+    Components:
+    {components_desc_yaml}
+    """
+
     @staticmethod
     def get_plan_prompt(description: str) -> str:
         return f"""
