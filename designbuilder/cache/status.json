@@ -1,0 +1,26 @@
+{
+    "agent-1": {
+        "name": "HTTP Server",
+        "status": "implementing",
+        "debug_attempts": 10,
+        "llm_backend": "Gemini"
+    },
+    "agent-2": {
+        "name": "Router",
+        "status": "implementing",
+        "debug_attempts": 10,
+        "llm_backend": "Gemini"
+    },
+    "agent-3": {
+        "name": "Handler",
+        "status": "writing tests",
+        "debug_attempts": 10,
+        "llm_backend": "Gemini"
+    },
+    "agent-4": {
+        "name": "Logger",
+        "status": "implementing",
+        "debug_attempts": 10,
+        "llm_backend": "Gemini"
+    }
+}
