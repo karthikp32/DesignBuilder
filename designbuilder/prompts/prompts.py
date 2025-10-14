@@ -15,19 +15,19 @@ class Prompts:
     Example:
 
     - name: UserService
-    description: Manages user accounts including registration, authentication, profile updates, and account deletion. Ensures secure password storage and validation, and interfaces with notification and analytics subsystems.
-    language: Python
+      description: "Manages user accounts including registration, authentication, profile updates, and account deletion. It also handles secure password storage."
+      language: Python
 
     - name: PaymentGateway
-    description: Handles all payment processing including credit card transactions, refunds, and recurring billing. Integrates with external payment providers and logs all transactions for auditing purposes.
-    language: null
+      description: "Handles all payment processing. Integrates with external payment providers like Stripe."
+      language: null
 
     Now extract components from the document below:
 
     {full_text}
 
     Return only a valid YAML list with keys: name, description, and language. Each description should be detailed and informative.
-
+    IMPORTANT: If a description string contains special characters like a colon (:), you MUST enclose the entire string in double quotes to ensure the YAML is valid.
         """
 
     def get_unified_plan_prompt(components_desc_yaml) -> str:
@@ -106,6 +106,7 @@ class Prompts:
     - Keep tests elegant, minimal, and focused on verifying correctness and robustness.
     - Include setup and teardown if necessary.
     - Return only valid Python test code with no markdown, comments, or explanations.
+    - Only include unit test code, not class code
     """
 
     @staticmethod
