@@ -10,6 +10,8 @@ import yaml
 from . import parser
 from designbuilder.coding_agents.python_agent import PythonAgent
 from designbuilder.core.status_manager import StatusManager # Import StatusManager
+from designbuilder.core.cache_manager import CacheManager
+from designbuilder.core.planner import Planner
 
 class Orchestrator:
     """
@@ -45,9 +47,14 @@ class Orchestrator:
         Main entrypoint to start the build process.
         """
         print("Orchestrator starting...")
-        components_yaml = await parser.parse_design_docs(self.design_docs)
-        self.components = yaml.safe_load(components_yaml) if components_yaml else []
-        print(f"Found {len(self.components)} components.")
+        
+        text_in_design_doc, components_desc_yaml = await parser.parse_design_docs(self.design_docs)
+        num_of_components = len(yaml.safe_load(components_plans_yaml))
+        print(f"Found {num_of_components} components.")
+
+        planner = Planner(design_doc_text=text_in_design_doc)
+        components_plans_yaml = await planner.plan_all(components_desc_yaml=components_desc_yaml)
+        self.components = yaml.safe_load(components_plans_yaml) if components_plans_yaml else []
 
         tasks = []
         self.agents = []

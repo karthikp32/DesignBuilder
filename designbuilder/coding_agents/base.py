@@ -93,8 +93,8 @@ class CodingAgent(ABC):
         self.status = "setting up scripts"
         await self.setup_scripts()
 
-        self.status = "planning"
-        await self.plan()
+        # self.status = "planning"
+        # await self.plan()
 
         self.status = "implementing"
         await self.implement()

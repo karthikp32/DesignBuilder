@@ -7,8 +7,8 @@ import json
 import os
 from filelock import FileLock
 
-STATUS_FILE = "/home/karthik/repos/DesignBuilder/designbuilder/state/status.json"
-LOCK_FILE = "/home/karthik/repos/DesignBuilder/designbuilder/state/status.json.lock"
+STATUS_FILE = "/home/karthik/repos/DesignBuilder/designbuilder/cache/status.json"
+LOCK_FILE = "/home/karthik/repos/DesignBuilder/designbuilder/cache/status.json.lock"
 
 class StatusManager:
     """

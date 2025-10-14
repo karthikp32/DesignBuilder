@@ -9,6 +9,7 @@ import yaml
 import docx
 from pypdf import PdfReader
 from designbuilder.llm_backends.gemini import GeminiBackend
+from designbuilder.llm_backends.gpt4_turbo import GPT4TurboBackend
 from designbuilder.prompts.prompts import Prompts
 
 async def _read_file_content(file_path: str) -> str:
@@ -47,7 +48,8 @@ async def parse_design_docs(design_docs: list[str]) -> str:
     full_text = ""
     for doc_path in design_docs:
         full_text += await _read_file_content(doc_path) + "\n\n"
-
+    
+    #TODO: modify this to return list of full texts
     if not full_text.strip():
         return ""
 
@@ -66,4 +68,4 @@ async def parse_design_docs(design_docs: list[str]) -> str:
         print(f"LLM output:\n{yaml_output}")
         components = []
 
-    return yaml.dump(components)
+    return full_text, yaml.dump(components)
