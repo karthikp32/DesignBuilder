@@ -6,7 +6,6 @@ parallel coding agents to build, test, and debug them.
 """
 import asyncio
 import os
-import yaml
 from . import parser
 from designbuilder.coding_agents.python_agent import PythonAgent
 from designbuilder.core.status_manager import StatusManager # Import StatusManager
@@ -63,11 +62,14 @@ class Orchestrator:
         self.agent_map = {}
 
         for component in self.components:
-            agent = PythonAgent(component, orchestrator=self)
+            agent_name = self._generate_agent_name()
+            agent = PythonAgent(
+                component,
+                status_manager=self.status_manager,
+                agent_name=agent_name
+            )
             if 'plan' in component:
                 agent._plan = component['plan']
-            
-            agent_name = self._generate_agent_name()
 
             loaded_state = None
             if component['name'] in self._loaded_agent_states:
@@ -136,10 +138,3 @@ class Orchestrator:
         print("Running AI evaluations (functional, style, robustness)...")
         # TODO: Implement AI evaluation logic
         pass
-
-    def on_agent_status_update(self, agent):
-        """
-        Callback for agents to report status changes.
-        """
-        print(f"Agent {agent.component['name']} status updated to: {agent.status}")
-        self._save_state()

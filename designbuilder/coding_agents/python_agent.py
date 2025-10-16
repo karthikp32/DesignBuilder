@@ -6,16 +6,18 @@ writing, testing, and debugging Python code.
 """
 import asyncio
 import os
+import json
 from .base import CodingAgent
 from designbuilder.llm_backends.gemini import GeminiBackend
+from designbuilder.llm_backends.gpt4_turbo import GPT4TurboBackend
 from designbuilder.prompts.prompts import Prompts
 
 class PythonAgent(CodingAgent):
     """
     A coding agent for generating Python code.
     """
-    def __init__(self, component: dict, orchestrator=None):
-        super().__init__(component, orchestrator)
+    def __init__(self, component: dict, status_manager=None, agent_name=None):
+        super().__init__(component, status_manager, agent_name)
         self.llm_backend = GeminiBackend()
         self.output_dir = "/home/karthik/repos/DesignBuilder/designbuilder/output/"
         self.class_dir = os.path.join(self.output_dir, "classes")
@@ -79,7 +81,8 @@ class PythonAgent(CodingAgent):
 
     async def implement(self):
         self._log("Implementing Python component...")
-        prompt = Prompts.get_implement_prompt(self._plan)
+        plan_str = json.dumps(self._plan, indent=4)
+        prompt = Prompts.get_implement_prompt(plan_str)
         implementation_code = await self.llm_backend.send_prompt(prompt)
         # Extract code from response and write to file
         code = self._extract_code(implementation_code)
@@ -213,7 +216,7 @@ class PythonAgent(CodingAgent):
 
     def get_llm_backend_name(self) -> str:
         """Returns a user-friendly name for the LLM backend."""
-        return "Gemini"
+        return self.llm_backend.model_name
 
     def _log(self, message: str):
         """Log a message to the agent's log file."""

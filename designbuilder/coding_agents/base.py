@@ -14,9 +14,10 @@ class CodingAgent(ABC):
     """
     MAX_DEBUG_ATTEMPTS = 10
 
-    def __init__(self, component: dict, orchestrator=None):
+    def __init__(self, component: dict, status_manager=None, agent_name=None):
         self.component = component
-        self.orchestrator = orchestrator
+        self.status_manager = status_manager
+        self.agent_name = agent_name
         self.debug_attempts = 0
         self._status = "initialized"
         self.changes_summary = []
@@ -35,6 +36,11 @@ class CodingAgent(ABC):
         # Create log directory if it doesn't exist
         os.makedirs(log_dir, exist_ok=True)
 
+    def _save_status(self):
+        if self.status_manager and self.agent_name:
+            self.status_manager.set_agent_status(self.agent_name, self.status)
+            print(f"Agent {self.component['name']} status updated to: {self.status}")
+
     @property
     def status(self):
         return self._status
@@ -43,8 +49,6 @@ class CodingAgent(ABC):
     def status(self, value):
         if self._status != value:
             self._status = value
-            if self.orchestrator:
-                self.orchestrator.on_agent_status_update(self)
 
     @abstractmethod
     async def setup_scripts(self):
@@ -91,36 +95,45 @@ class CodingAgent(ABC):
         Execute the full implement -> test -> debug loop.
         """
         self.status = "setting up scripts"
+        self._save_status()
         await self.setup_scripts()
 
         # self.status = "planning"
+        # self._save_status()
         # await self.plan()
 
         self.status = "implementing"
+        self._save_status()
         await self.implement()
 
         self.status = "writing tests"
+        self._save_status()
         await self.write_tests()
 
 
         self.status = "testing"
+        self._save_status()
         test_result, test_summary = await self.test()
         while test_result != "PASSED":
             if self.debug_attempts >= self.MAX_DEBUG_ATTEMPTS:
                 self._log(f"Max debug attempts ({self.MAX_DEBUG_ATTEMPTS}) reached for {self.component['name']}. Manual intervention required.")
                 print(f"[ATTENTION] Max debug attempts reached for {self.component['name']}. Please review logs and code for manual debugging.")
                 self.status = "paused_for_guidance"
+                self._save_status()
                 break
 
             self.debug_attempts += 1
             self._log(f"Debug attempt {self.debug_attempts}/{self.MAX_DEBUG_ATTEMPTS} for {self.component['name']}.")
             self.status = "debugging"
+            self._save_status()
             await self.debug(test_summary)
             self.status = "testing" # After debug, re-test
+            self._save_status()
             test_result, test_summary = await self.test()
 
         if self.status != "paused_for_guidance":
             self.status = "completed"
+            self._save_status()
 
     def _log(self, message: str):
         """Log a message to the agent's log file."""
