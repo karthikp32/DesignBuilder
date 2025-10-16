@@ -47,7 +47,7 @@ class StatusManager:
             statuses = self.get_all_status()
             if agent_name not in statuses:
                 statuses[agent_name] = {}
-            statuses[agent_name].update(new_status)
+            statuses[agent_name]['status'] = new_status
             with open(STATUS_FILE, 'w') as f:
                 json.dump(statuses, f, indent=4)
 
