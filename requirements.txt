@@ -2,6 +2,7 @@ typer
 pytest
 pypdf
 python-docx
+openai
 google-generativeai
 filelock
 pyyaml
