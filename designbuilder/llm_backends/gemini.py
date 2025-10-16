@@ -16,10 +16,17 @@ class GeminiBackend(LLMBackend):
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable not set.")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-2.5-flash')
         self.model_name = 'gemini-2.5-flash'
+        self.model = genai.GenerativeModel(self.model_name)
+
 
     async def send_prompt(self, prompt: str) -> str:
         """Generates content using the Gemini API."""
         response = await self.model.generate_content_async(prompt)
-        return response.text
+        try:
+            return response.text
+        except ValueError:
+            # This can happen if the model returns a response with no content part,
+            # often due to safety filters or if it generates an empty string.
+            print("Warning: Gemini response contained no valid text part. Returning empty string.")
+            return ""
