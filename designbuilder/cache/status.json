@@ -1,26 +1,26 @@
 {
     "agent-1": {
         "name": "HTTP Server",
-        "status": "implementing",
+        "status": "paused_for_guidance",
         "debug_attempts": 10,
-        "llm_backend": "Gemini"
+        "llm_backend": "gemini-2.5-flash"
     },
     "agent-2": {
         "name": "Router",
-        "status": "implementing",
+        "status": "paused_for_guidance",
         "debug_attempts": 10,
-        "llm_backend": "Gemini"
+        "llm_backend": "gemini-2.5-flash"
     },
     "agent-3": {
         "name": "Handler",
-        "status": "writing tests",
+        "status": "paused_for_guidance",
         "debug_attempts": 10,
-        "llm_backend": "Gemini"
+        "llm_backend": "gemini-2.5-flash"
     },
     "agent-4": {
         "name": "Logger",
-        "status": "implementing",
+        "status": "paused_for_guidance",
         "debug_attempts": 10,
-        "llm_backend": "Gemini"
+        "llm_backend": "gemini-2.5-flash"
     }
 }
